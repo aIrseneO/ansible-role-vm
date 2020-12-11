@@ -1,2 +1,2 @@
-# Algorithms
-Set of useful algorithms implemented in different programming language.
+# Coding
+Set of useful algorithms and data structures implemented in different programming language.
