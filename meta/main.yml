@@ -1,5 +1,6 @@
 galaxy_info:
-  author: iodevopens
+  role_name: virtual_machine
+  author: airseneo
   description: Automate the creation of Virtual Machine(s) using Vagrant and Virtualbox
   company: iodevopens
 

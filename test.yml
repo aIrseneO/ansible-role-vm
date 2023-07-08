@@ -1,7 +1,7 @@
 ---
 - hosts: test
   roles:
-    - role: ansible-role-vm
+    - role: airseneo.virtual-machine
       vars:
         host_working_directory: "/home/{{ ansible_user }}/test"
 
