@@ -1,0 +1,37 @@
+---
+- name: Set command
+  set_fact:
+    cmd: >-
+      {%- if iodo == 'up' or iodo == 'resume' -%}
+        vagrant --no-tty {{ iodo }}
+      {%- elif iodo == 'status' or iodo == 'validate' -%}
+        vagrant --no-tty {{ iodo }}
+      {%- elif iodo == 'halt' or iodo == 'suspend' -%}
+        vagrant --no-tty {{ iodo }}
+      {%- elif iodo == 'reload' -%}
+        vagrant --no-tty {{ iodo }}
+      {%- elif iodo == 'destroy' -%}
+        vagrant {{ iodo }} --force
+      {%- else -%}
+        vagrant --no-tty status
+      {%- endif -%}
+
+- name: Install packages
+  become: true
+  package:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - ansible
+  when: iode is defined and iodo != "destroy"
+
+- name: Copy files to host machine
+  include_tasks: copy_files_to_host.yml
+  when: 
+    - iodo == "up" or iodo == "reload" or iodo == "resume"
+
+- name: Run vagrant command
+  include_tasks: run_vagrant_command.yml
+
+- name: clean host machine from copied files
+  include_tasks: clean_host_machine.yml

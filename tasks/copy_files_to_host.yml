@@ -1,0 +1,19 @@
+---
+- name: Copy vagrant files to the host machine
+  copy:
+    src: vagrant
+    dest: "{{ host_working_directory }}"
+    force: yes
+    mode: 0755
+
+- name: Copy tasks and scripts files to the host machine
+  copy:
+    src: "{{ item }}"
+    dest: "{{ host_working_directory }}/vagrant"
+  with_items: "{{ provision_files }}"
+
+- name: Copy tasks and scripts directory to the host machine
+  copy:
+    src: "{{ item }}/"
+    dest: "{{ host_working_directory }}/vagrant"
+  with_items: "{{ provision_directories }}"

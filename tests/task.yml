@@ -1,0 +1,6 @@
+---
+- name: Let iptables see bridged traffic.
+  copy:
+    content: |
+      Hello world from task, I'm 42
+    dest: "/home/{{ ansible_user}}/hello_world_task"

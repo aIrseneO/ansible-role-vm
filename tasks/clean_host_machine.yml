@@ -1,0 +1,6 @@
+---
+- name: Recursively remove directory
+  file:
+    path: "{{ host_working_directory }}/vagrant"
+    state: absent
+  when: iodo is defined and iodo == "destroy"
