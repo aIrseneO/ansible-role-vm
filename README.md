@@ -25,7 +25,7 @@ Including an example of how to use your role (for instance, with variables passe
 
     - hosts: test
       roles:
-        - role: airseneo.virtual-machine
+        - role: airseneo.virtual_machine
           vars:
             host_working_directory: "/home/{{ ansible_user }}"
 
