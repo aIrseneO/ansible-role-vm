@@ -1,8 +1,0 @@
----
-- hosts: all
-  tasks:
-  - name: Run tasks
-    include_tasks: "{{ tasks_file }}"
-    when: 
-    - tasks_file is defined
-    - tasks_file

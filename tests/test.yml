@@ -1,37 +1,26 @@
 ---
-- hosts: test
+- hosts: localhost
+  remote_user: root
   roles:
-    - role: airseneo.virtual_machine
-      vars:
-        host_working_directory: "/home/{{ ansible_user }}/test"
+    - vm
+  vars:
+    iodo: up
+    machine_user: ansible
+    pub_key: "~/.ssh/id_rsa.pub"
+    nodes_vm:
+    - NAME: master
+      IMAGE: generic/ubuntu2004
+      TAG: 4.2.6
+      CPU: 1
+      MEMORY: 1028
+      IP: 192.168.1.199
+      NETWORK: public
+      BRIDGE: "{{ ansible_default_ipv4.interface }}"
+      MAC: "424242424210"
+      HOSTNAME: master
+      PROVIDER: virtualbox
+      PLAYBOOK: playbook.yml
+      DISABLE_SYNC: true
+      LOCAL_SYNC: "."
+      REMOTE_SYNC: "/vagrant"
 
-        provision_files:
-          - script.sh
-          - task.yml
-
-        provision_directories: []
-
-        iodo: up
-      
-        nodes_vm:
-          - NAME: VM42
-            CPU: 1
-            MEMORY: 1024
-            HOSTNAME: VM42
-
-            IMAGE: generic/ubuntu2004
-            TAG: 4.2.16
-
-            PROVIDER: virtualbox
-
-            NETWORK: public
-            IP: 192.168.1.42
-
-            DISABLE_SYNC: false
-            LOCAL_SYNC: "."
-            REMOTE_SYNC: "/vagrant"
-            
-            TASKS_FILE: "task.yml"
-
-            SCRIPT_FILE: "script.sh"
-            SCRIPT_ARGS: "42"

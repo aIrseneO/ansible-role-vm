@@ -1,62 +1,65 @@
 ---
+# defaults file for vm
+
+# Host  : machine hosting the VM(s)
+# Local : anisble machine where the playbook is run 
+# Host and Local can be the same machine. 
+
+## User of the host machine
+#
+host_user: ansible
+
 ## Working directory on the host machine
-# 
-host_working_directory: "/home/{{ ansible_user }}/test"
-
-## Tasks and Scripts files
-#   tasks and scripts files that
-#   will be run on the VM(s) (SCRIPT_FILE and TASKS_FILE)
 #
-provision_files: []
+working_dir: "/home/{{ host_user }}/vagrant"
 
-## Tasks and Scripts directory
-#   this directory contains tasks and scripts that
-#   will be run on the VM(s) (SCRIPT_FILE and TASKS_FILE)
+## Public key to allow ssh client to access VM(s)
+#   Local ssh public key can be used "~/.ssh/id_rsa.pub"
 #
-provision_directories: []
+pub_key: ""
 
-## Vagrant command
-#   up | resume | status |  validate | halt |
-#       suspend | reload | destroy
+## Vagrant available actions:
+#     start | clean | reload
 #
-iodo: status
+iodo: start
+
+## Run command for a specific node i.e. "VM42"
+#
+node: ""
 
 ## List of VM(s) to create
 # 
 nodes_vm: []
-  # - NAME: VM42
-  #   ## VM resources
-  #   #
-  #   CPU: 1
-  #   MEMORY: 1024
-  #   HOSTNAME: VM42
+# - NAME: VM42
+#   ## VM resources
+#   #
+#   CPU: 1
+#   MEMORY: 1024
+#   HOSTNAME: VM42
 
-  #   ## Image
-  #   #
-  #   IMAGE: generic/ubuntu2004
-  #   TAG: 4.2.16
+#   ## Image:
+#   #
+#   IMAGE: generic/ubuntu1804
+#   TAG: 4.1.20
 
-  #   ## Provider (tested with Virtualbox only)
-  #   #
-  #   PROVIDER: virtualbox
+#   ## Provider: tested with Virtualbox only
+#   #
+#   PROVIDER: virtualbox
 
-  #   ## Networking
-  #   #   NETWORK: public | private, default public
-  #   #
-  #   NETWORK: public
-  #   IP: 192.168.1.42
+#   ## Networking
+#   #   Network: public | private
+#   #
+#   NETWORK: public
+#   IP: 192.168.1.42
+#   MAC: 012345678912
 
-  #   ## SYNC, configure the sync betweem the host and the VM
-  #   #
-  #   DISABLE_SYNC: true
-  #   LOCAL_SYNC: "."
-  #   REMOTE_SYNC: "/vagrant"
-    
-  #   ## Task to run during VM creation (file name)
-  #   #
-  #   TASKS_FILE: ""
-
-  #   ## Script to run during VM creation (file name)
-  #   #
-  #   SCRIPT_FILE: ""
-  #   SCRIPT_ARGS: ""
+#   ## SYNC: configure the sync betweem the host and the VM
+#   #
+#   DISABLE_SYNC: true
+#   LOCAL_SYNC: "."
+#   REMOTE_SYNC: "/vagrant"
+  
+#   ## Task: To run on the VM during creation
+#   #
+#   TASK:
+#   PLAYBOOK: "playbook.yml"

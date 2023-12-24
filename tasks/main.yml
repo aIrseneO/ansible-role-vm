@@ -1,20 +1,44 @@
 ---
+# tasks file for vm
+
 - name: Set command
   set_fact:
     cmd: >-
       {%- if iodo == 'up' or iodo == 'resume' -%}
         vagrant --no-tty {{ iodo }}
-      {%- elif iodo == 'status' or iodo == 'validate' -%}
+      {%- elif iodo == 'status' or iodo=='validate' -%}
         vagrant --no-tty {{ iodo }}
       {%- elif iodo == 'halt' or iodo == 'suspend' -%}
         vagrant --no-tty {{ iodo }}
       {%- elif iodo == 'reload' -%}
         vagrant --no-tty {{ iodo }}
       {%- elif iodo == 'destroy' -%}
-        vagrant {{ iodo }} --force
+        vagrant --no-tty {{ iodo }} --force
       {%- else -%}
         vagrant --no-tty status
       {%- endif -%}
+
+- name: Copy files and key to the host machine
+  block:
+  - name: Create working directory if not present
+    ansible.builtin.file:
+      path: "{{ working_dir }}"
+      state: directory
+
+  - name: Copy node files
+    copy:
+      src: "./"
+      dest: "{{ working_dir }}"
+      force: yes
+      mode: 0755
+
+  - name: Copy pub key
+    copy:
+      src: "{{ pub_key }}"
+      dest: "{{ working_dir }}/id_rsa.pub"
+  when: 
+  - iodo is defined 
+  - iodo == "up" or iodo == "reload" or iodo == "resume"
 
 - name: Install packages
   become: true
@@ -23,15 +47,99 @@
     state: present
   with_items:
   - ansible
-  when: iode is defined and iodo != "destroy"
+  - nfs-common
+  when: iodo is defined and iodo != "destroy"
 
-- name: Copy files to host machine
-  include_tasks: copy_files_to_host.yml
-  when: 
-    - iodo == "up" or iodo == "reload" or iodo == "resume"
+- name: Check that the Vagrantfile exists
+  stat:
+    path: "{{ working_dir }}/Vagrantfile"
+  register: Vagrantfile
 
-- name: Run vagrant command
-  include_tasks: run_vagrant_command.yml
+- name: "{{ iodo }} nodes"
+  shell: "{{ cmd }} {{ item.NAME }}"
+  args:
+    chdir: "{{ working_dir }}"
+  environment:
+    NAME:         "{{ item.NAME }}"
+    IMAGE:        "{{ item.IMAGE }}"
+    TAG:          "{{ item.TAG }}"
+    CPU:          "{{ item.CPU }}"
+    MEMORY:       "{{ item.MEMORY }}"
+    IP:           "{{ item.IP }}"
+    NETWORK:      "{{ item.NETWORK }}"
+    BRIDGE:       "{{ item.BRIDGE }}"
+    MAC:          "{{ item.MAC }}"
+    HOSTNAME:     "{{ item.HOSTNAME }}"
+    PROVIDER:     "{{ item.PROVIDER }}"
+    PLAYBOOK:     "{{ item.PLAYBOOK }}"
+    DISABLE_SYNC: "{{ item.DISABLE_SYNC }}"
+    LOCAL_SYNC:   "{{ item.LOCAL_SYNC }}"
+    REMOTE_SYNC:  "{{ item.REMOTE_SYNC }}"
+  register: response
+  with_items: "{{ nodes_vm }}"
+  when:
+  - cmd and Vagrantfile.stat.exists
+  - not node
 
-- name: clean host machine from copied files
-  include_tasks: clean_host_machine.yml
+- debug:
+    msg: 
+      - "{{ item.stdout_lines | default(item) }}"
+  with_items:
+  - "{{ response.results | default(response) }}"
+
+- name: "{{ iodo }} {{ node }}"
+  block:
+    - name: Get index of node
+      set_fact:
+        NAME:         "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='NAME') | first }}"
+        IMAGE:        "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='IMAGE') | first }}"
+        TAG:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='TAG') | first }}"
+        CPU:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='CPU') | first }}"
+        MEMORY:       "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='MEMORY') | first }}"
+        IP:           "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='IP') | first }}"
+        NETWORK:      "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='NETWORK') | first }}"
+        BRIDGE:       "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='BRIDGE') | first }}"
+        MAC:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='MAC') | first }}"
+        HOSTNAME:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='HOSTNAME') | first }}"
+        PROVIDER:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='PROVIDER') | first }}"
+        PLAYBOOK:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='PLAYBOOK') | first }}"
+        DISABLE_SYNC: "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='DISABLE_SYNC') | first }}"
+        LOCAL_SYNC:   "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='LOCAL_SYNC') | first }}"
+        REMOTE_SYNC:  "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='REMOTE_SYNC') | first }}"
+    
+    - name: Apply command
+      shell: "{{ cmd }} {{ node }}"
+      args:
+        chdir: "{{ working_dir }}"
+      environment:
+        NAME:         "{{ NAME }}"
+        IMAGE:        "{{ IMAGE }}"
+        TAG:          "{{ TAG }}"
+        CPU:          "{{ CPU }}"
+        MEMORY:       "{{ MEMORY }}"
+        IP:           "{{ IP }}"
+        NETWORK:      "{{ NETWORK }}"
+        BRIDGE:       "{{ BRIDGE }}"
+        MAC:          "{{ MAC }}"
+        HOSTNAME:     "{{ HOSTNAME }}"
+        PROVIDER:     "{{ PROVIDER }}"
+        PLAYBOOK:     "{{ PLAYBOOK }}"
+        DISABLE_SYNC: "{{ DISABLE_SYNC }}"
+        LOCAL_SYNC:   "{{ LOCAL_SYNC }}"
+        REMOTE_SYNC:  "{{ REMOTE_SYNC }}"
+      register: response
+
+    - debug:
+        msg: 
+          - "{{ item.stdout_lines | default(item) }}"
+      with_items:
+      - "{{ response.results | default(response) }}"
+  when:
+  - cmd and Vagrantfile.stat.exists
+  - node and nodes_vm | selectattr('NAME', 'eq', node ) | list | first is defined
+
+- name: Recursively remove directory
+  file:
+    path: "{{ working_dir }}"
+    state: absent
+  when: iodo is defined and iodo == "destroy"

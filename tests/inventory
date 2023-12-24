@@ -1,2 +1,2 @@
-test ansible_host=<server> ansible_connection=ssh ansible_user=ansible
+localhost
 

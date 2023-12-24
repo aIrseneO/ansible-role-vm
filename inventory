@@ -1,2 +1,0 @@
-test ansible_host=<VM(s) host machine> ansible_connection=ssh ansible_user=<user>
-
