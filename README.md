@@ -1,38 +1,58 @@
 Role Name
 =========
 
-A brief description of the role goes here.
+Automate the creation on Virtual machines using Virtualbox Vagrant.
 
 Requirements
 ------------
 
 Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
+Vagrant and Virtualbox should be installed on the machine host (machine that will host VM(s)).
+
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+Available variables are listed below, along with default values (see `defaults/main.yml`):
+
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+None.
 
 Example Playbook
 ----------------
-
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
     - hosts: servers
       roles:
-         - { role: username.rolename, x: 42 }
+         - aIrseneO.vm
+      vars:
+          action: up
+          host_user: ansible
+          pub_key: "~/.ssh/id_rsa.pub"
+          node_select: VM42
+          nodes_vm:
+          - NAME: VM42
+            HOSTNAME: VM42
+            CPU: 1
+            MEMORY: 1024
+            IMAGE: generic/ubuntu2004
+            TAG: 4.3.6
+            PROVIDER: virtualbox
+            NETWORK: public
+            IP: 192.168.1.42
+            MAC: "080027d590d9"
+            BRIDGE: "{{ ansible_default_ipv4.interface }}"
+            DISABLE_SYNC: true
+            LOCAL_SYNC: "."
+            REMOTE_SYNC: "/vagrant"
 
 License
 -------
 
-BSD
+MIT
 
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+This role was create in 2023 by [AIrseneO](https://github.com/aIrseneO)
