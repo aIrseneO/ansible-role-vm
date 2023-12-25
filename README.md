@@ -1,12 +1,10 @@
 Role Name
 =========
 
-Automate the creation on Virtual machines using Virtualbox Vagrant.
+Automate the creation on Virtual machines using Virtualbox and Vagrant.
 
 Requirements
 ------------
-
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
 Vagrant and Virtualbox should be installed on the machine host (machine that will host VM(s)).
 
