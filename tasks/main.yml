@@ -1,24 +1,30 @@
 ---
 # tasks file for vm
+- name: Set available actions
+  set_fact:
+    actions_start:
+      - status
+      - validate
+      - up
+      - resume
+      - reload
+    actions_stop:
+      - halt
+      - suspend
+      - destroy
 
 - name: Set command
   set_fact:
     cmd: >-
-      {%- if iodo == 'up' or iodo == 'resume' -%}
-        vagrant --no-tty {{ iodo }}
-      {%- elif iodo == 'status' or iodo=='validate' -%}
-        vagrant --no-tty {{ iodo }}
-      {%- elif iodo == 'halt' or iodo == 'suspend' -%}
-        vagrant --no-tty {{ iodo }}
-      {%- elif iodo == 'reload' -%}
-        vagrant --no-tty {{ iodo }}
-      {%- elif iodo == 'destroy' -%}
-        vagrant --no-tty {{ iodo }} --force
+      {%- if action == 'destroy' -%}
+        vagrant --no-tty {{ action }} --force
+      {%- elif action in actions_start or action in actions_stop -%}
+        vagrant --no-tty {{ action }}
       {%- else -%}
         vagrant --no-tty status
       {%- endif -%}
 
-- name: Copy files and key to the host machine
+- name: Copy files to the host machine
   block:
   - name: Create working directory if not present
     ansible.builtin.file:
@@ -31,14 +37,22 @@
       dest: "{{ working_dir }}"
       force: yes
       mode: 0755
+  when:
+  - action in actions_start
 
-  - name: Copy pub key
-    copy:
-      src: "{{ pub_key }}"
-      dest: "{{ working_dir }}/id_rsa.pub"
+- name: Check if '{{ pub_key }}' exists
+  stat:
+    path: "{{ pub_key }}"
+  register: is_pub_key
+  when: action in actions_start and pub_key
+
+- name: Copy pub key to the host machine
+  copy:
+    src: "{{ pub_key }}"
+    dest: "{{ working_dir }}/id_rsa.pub"
   when: 
-  - iodo is defined 
-  - iodo == "up" or iodo == "reload" or iodo == "resume"
+  - action in actions_start
+  - pub_key and is_pub_key.stat.exists
 
 - name: Install packages
   become: true
@@ -47,86 +61,94 @@
     state: present
   with_items:
   - ansible
-  - nfs-common
-  when: iodo is defined and iodo != "destroy"
+  when: action in actions_start
 
-- name: Check that the Vagrantfile exists
+- name: Check if Vagrantfile exists
   stat:
     path: "{{ working_dir }}/Vagrantfile"
   register: Vagrantfile
 
-- name: "{{ iodo }} nodes"
-  shell: "{{ cmd }} {{ item.NAME }}"
-  args:
-    chdir: "{{ working_dir }}"
-  environment:
-    NAME:         "{{ item.NAME }}"
-    IMAGE:        "{{ item.IMAGE }}"
-    TAG:          "{{ item.TAG }}"
-    CPU:          "{{ item.CPU }}"
-    MEMORY:       "{{ item.MEMORY }}"
-    IP:           "{{ item.IP }}"
-    NETWORK:      "{{ item.NETWORK }}"
-    BRIDGE:       "{{ item.BRIDGE }}"
-    MAC:          "{{ item.MAC }}"
-    HOSTNAME:     "{{ item.HOSTNAME }}"
-    PROVIDER:     "{{ item.PROVIDER }}"
-    PLAYBOOK:     "{{ item.PLAYBOOK }}"
-    DISABLE_SYNC: "{{ item.DISABLE_SYNC }}"
-    LOCAL_SYNC:   "{{ item.LOCAL_SYNC }}"
-    REMOTE_SYNC:  "{{ item.REMOTE_SYNC }}"
-  register: response
-  with_items: "{{ nodes_vm }}"
+- name: "vagrant {{ action }}"
+  block:
+  - name: "{{ action }} nodes"
+    shell: "{{ cmd }} {{ item.NAME }}"
+    args:
+      chdir: "{{ working_dir }}"
+    environment:
+      NAME:         "{{ item.NAME }}"
+      HOSTNAME:     "{{ item.HOSTNAME }}"
+      CPU:          "{{ item.CPU }}"
+      MEMORY:       "{{ item.MEMORY }}"
+      IMAGE:        "{{ item.IMAGE }}"
+      TAG:          "{{ item.TAG }}"
+      PROVIDER:     "{{ item.PROVIDER }}"
+      NETWORK:      "{{ item.NETWORK }}"
+      IP:           "{{ item.IP }}"
+      MAC:          "{{ item.MAC }}"
+      BRIDGE:       "{{ item.BRIDGE }}"
+      DISABLE_SYNC: "{{ item.DISABLE_SYNC }}"
+      LOCAL_SYNC:   "{{ item.LOCAL_SYNC }}"
+      REMOTE_SYNC:  "{{ item.REMOTE_SYNC }}"
+      # PLAYBOOK:     "{{ item.PLAYBOOK }}"
+      # SCRIPT:       "{{ item.SCRIPT }}"
+      # SCRIPT_ARGS:  "{{ item.SCRIPT_ARGS }}"
+    register: response
+    with_items: "{{ nodes_vm }}"
+
+  - debug:
+      msg: 
+        - "{{ item.stdout_lines | default(item) }}"
+    with_items:
+    - "{{ response.results | default(response) }}"
+
   when:
-  - cmd and Vagrantfile.stat.exists
-  - not node
+  - Vagrantfile.stat.exists
+  - node_select is undefined or not node_select
 
-- debug:
-    msg: 
-      - "{{ item.stdout_lines | default(item) }}"
-  with_items:
-  - "{{ response.results | default(response) }}"
-
-- name: "{{ iodo }} {{ node }}"
+- name: "vagrant {{ action }} {{ node_select }}"
   block:
     - name: Get index of node
       set_fact:
-        NAME:         "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='NAME') | first }}"
-        IMAGE:        "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='IMAGE') | first }}"
-        TAG:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='TAG') | first }}"
-        CPU:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='CPU') | first }}"
-        MEMORY:       "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='MEMORY') | first }}"
-        IP:           "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='IP') | first }}"
-        NETWORK:      "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='NETWORK') | first }}"
-        BRIDGE:       "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='BRIDGE') | first }}"
-        MAC:          "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='MAC') | first }}"
-        HOSTNAME:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='HOSTNAME') | first }}"
-        PROVIDER:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='PROVIDER') | first }}"
-        PLAYBOOK:     "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='PLAYBOOK') | first }}"
-        DISABLE_SYNC: "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='DISABLE_SYNC') | first }}"
-        LOCAL_SYNC:   "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='LOCAL_SYNC') | first }}"
-        REMOTE_SYNC:  "{{ nodes_vm | selectattr('NAME', 'equalto', node) | map(attribute='REMOTE_SYNC') | first }}"
+        NAME:         "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='NAME') | first }}"
+        HOSTNAME:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='HOSTNAME') | first }}"
+        CPU:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='CPU') | first }}"
+        MEMORY:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='MEMORY') | first }}"
+        IMAGE:        "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='IMAGE') | first }}"
+        TAG:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='TAG') | first }}"
+        PROVIDER:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='PROVIDER') | first }}"
+        NETWORK:      "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='NETWORK') | first }}"
+        IP:           "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='IP') | first }}"
+        MAC:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='MAC') | first }}"
+        BRIDGE:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='BRIDGE') | first }}"
+        DISABLE_SYNC: "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='DISABLE_SYNC') | first }}"
+        LOCAL_SYNC:   "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='LOCAL_SYNC') | first }}"
+        REMOTE_SYNC:  "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='REMOTE_SYNC') | first }}"
+        # PLAYBOOK:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='PLAYBOOK') | first }}"
+        # SCRIPT:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='SCRIPT') | first }}"
+        # SCRIPT_ARGS:  "{{ nodes_vm | selectattr('NAME', 'equalto', node_select) | map(attribute='SCRIPT_ARGS') | first }}"
     
     - name: Apply command
-      shell: "{{ cmd }} {{ node }}"
+      shell: "{{ cmd }} {{ node_select }}"
       args:
         chdir: "{{ working_dir }}"
       environment:
         NAME:         "{{ NAME }}"
-        IMAGE:        "{{ IMAGE }}"
-        TAG:          "{{ TAG }}"
+        HOSTNAME:     "{{ HOSTNAME }}"
         CPU:          "{{ CPU }}"
         MEMORY:       "{{ MEMORY }}"
-        IP:           "{{ IP }}"
-        NETWORK:      "{{ NETWORK }}"
-        BRIDGE:       "{{ BRIDGE }}"
-        MAC:          "{{ MAC }}"
-        HOSTNAME:     "{{ HOSTNAME }}"
+        IMAGE:        "{{ IMAGE }}"
+        TAG:          "{{ TAG }}"
         PROVIDER:     "{{ PROVIDER }}"
-        PLAYBOOK:     "{{ PLAYBOOK }}"
+        NETWORK:      "{{ NETWORK }}"
+        IP:           "{{ IP }}"
+        MAC:          "{{ MAC }}"
+        BRIDGE:       "{{ BRIDGE }}"
         DISABLE_SYNC: "{{ DISABLE_SYNC }}"
         LOCAL_SYNC:   "{{ LOCAL_SYNC }}"
         REMOTE_SYNC:  "{{ REMOTE_SYNC }}"
+        # PLAYBOOK:     "{{ PLAYBOOK }}"
+        # SCRIPT:       "{{ SCRIPT }}"
+        # SCRIPT_ARGS:  "{{ SCRIPT_ARGS }}"
       register: response
 
     - debug:
@@ -134,12 +156,14 @@
           - "{{ item.stdout_lines | default(item) }}"
       with_items:
       - "{{ response.results | default(response) }}"
+
   when:
-  - cmd and Vagrantfile.stat.exists
-  - node and nodes_vm | selectattr('NAME', 'eq', node ) | list | first is defined
+  - Vagrantfile.stat.exists
+  - node_select is defined and node_select
+  - nodes_vm | selectattr('NAME', 'eq', node_select ) | list | first is defined
 
 - name: Recursively remove directory
   file:
     path: "{{ working_dir }}"
     state: absent
-  when: iodo is defined and iodo == "destroy"
+  when: action == "destroy"

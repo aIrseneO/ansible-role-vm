@@ -1,26 +1,29 @@
 ---
 - hosts: localhost
-  remote_user: root
   roles:
-    - vm
+    - ansible-role-vm
   vars:
-    iodo: up
-    machine_user: ansible
+    action: up
+    host_user: ansible
     pub_key: "~/.ssh/id_rsa.pub"
+    node_select: VM42
     nodes_vm:
-    - NAME: master
-      IMAGE: generic/ubuntu2004
-      TAG: 4.2.6
+    - NAME: VM42
+      HOSTNAME: VM42
       CPU: 1
-      MEMORY: 1028
-      IP: 192.168.1.199
-      NETWORK: public
-      BRIDGE: "{{ ansible_default_ipv4.interface }}"
-      MAC: "424242424210"
-      HOSTNAME: master
+      MEMORY: 1024
+      IMAGE: generic/ubuntu2004
+      TAG: 4.3.6
       PROVIDER: virtualbox
-      PLAYBOOK: playbook.yml
+      NETWORK: public
+      IP: 192.168.1.42
+      MAC: "080027d590d9"
+      BRIDGE: "{{ ansible_default_ipv4.interface }}"
       DISABLE_SYNC: true
       LOCAL_SYNC: "."
       REMOTE_SYNC: "/vagrant"
+      # PLAYBOOK: "void"
+      # SCRIPT: "void"
+      # SCRIPT_ARGS: ""
 
+# ansible-playbook -i inventory test.yml

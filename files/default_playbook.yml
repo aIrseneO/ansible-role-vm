@@ -1,0 +1,15 @@
+---
+- hosts: all
+  tasks:
+  - name: check if pub key exists
+    delegate_to: localhost
+    stat:
+      path: "{{ playbook_dir }}/id_rsa.pub"
+    register: pub_key
+
+  - name: copy pub key
+    ansible.posix.authorized_key:
+      user: vagrant
+      state: present
+      key: "{{ lookup('file', '{{ playbook_dir }}/id_rsa.pub') }}"
+    when: pub_key.stat.exists
