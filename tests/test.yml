@@ -1,9 +1,9 @@
 ---
 - hosts: localhost
   roles:
-    - ansible-role-vm
+    - aIrseneO.vm
   vars:
-    action: up
+    action: destroy
     host_user: ansible
     pub_key: "~/.ssh/id_rsa.pub"
     node_select: VM42
