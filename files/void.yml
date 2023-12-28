@@ -1,0 +1,4 @@
+---
+# DO NOT DELETE THIS FILE
+- hosts: all
+  tasks:

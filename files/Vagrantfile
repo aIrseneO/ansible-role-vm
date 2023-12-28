@@ -13,29 +13,29 @@ ENV['VAGRANT_DISABLE_VBOXSYMLINKCREATE']	= 'yes'
 ENV['VAGRANT_NO_PARALLEL']					      = 'yes'
 
 # Defaults
-NAME          = ENV["NAME"] || "VM42" # <- Always Required
-HOSTNAME      = ENV["HOSTNAME"] || ENV["NAME"] || "VM42"
+NAME          = ENV["NAME"]         || "VM42"
+HOSTNAME      = ENV["HOSTNAME"]     || "VM42"
 
-CPU           = ENV["CPU"] || "1"
-MEMORY        = ENV["MEMORY"] || "1024"
+CPU           = ENV["CPU"]          || "1"
+MEMORY        = ENV["MEMORY"]       || "1024"
 
-IMAGE         = ENV["IMAGE"] || "generic/ubuntu2004"
-TAG           = ENV["TAG"] || "4.3.6"
+IMAGE         = ENV["IMAGE"]        || "generic/ubuntu2004"
+TAG           = ENV["TAG"]          || "4.3.6"
 
-PROVIDER      = ENV["PROVIDER"] || "virtualbox"
+PROVIDER      = ENV["PROVIDER"]     || "virtualbox"
 
-NETWORK       = ENV["NETWORK"] || "private"
-IP            = ENV["IP"] || "192.168.1.42"
-MAC           = ENV["MAC"] || "012345678912"
-BRIDGE        = ENV["BRIDGE"] || "wlan"
+NETWORK       = ENV["NETWORK"]      || "private"
+IP            = ENV["IP"]           || "192.168.1.42"
+MAC           = ENV["MAC"]          || "012345678912"
+BRIDGE        = ENV["BRIDGE"]       || "wlan"
 
-DISABLE_SYNC  = ENV["SYNC"] || true
-LOCAL_SYNC    = ENV['LOCAL_SYNC'] || "."
-REMOTE_SYNC   = ENV['REMOTE_SYNC'] || "/vagrant"
+DISABLE_SYNC  = ENV["SYNC"]         || true
+LOCAL_SYNC    = ENV['LOCAL_SYNC']   || "."
+REMOTE_SYNC   = ENV['REMOTE_SYNC']  || "/vagrant"
 
-# PLAYBOOK      = ENV["PLAYBOOK"] || "void"
-# SCRIPT        = ENV["SCRIPT"] || "void"
-# SCRIPT_ARGS   = ENV["SCRIPT_ARGS"] || ""
+PLAYBOOK      = ENV["PLAYBOOK"]     || "void.yml"
+SCRIPT        = ENV["SCRIPT"]       || "void.sh"
+SCRIPT_ARGS   = ENV["SCRIPT_ARGS"]  || ""
 
 Vagrant.configure("2") do |config|
   # For a complete reference, the online documentation is at
@@ -45,19 +45,20 @@ Vagrant.configure("2") do |config|
   config.vm.synced_folder "#{LOCAL_SYNC}", "#{REMOTE_SYNC}",
     disabled: ENV['SYNC'], type: "rsync"
   
-  # # Enable provisioning with a shell script.
-  # config.vm.provision "script", type: "shell", run: "once",
-  #   path: "#{SCRIPT}", args: "#{SCRIPT_ARGS}"
-
-  # # Enable provisioning with ansible.
-  # config.vm.provision "ansible", type: "ansible", run: "once" do |ansible|
-  #   ansible.playbook = "#{PLAYBOOK}"
-  # end
-
   # Default provisioning with ansible.
-  config.vm.provision "ansible", type: "ansible", run: "always" do |ansible|
+  config.vm.provision "default", type: "ansible", run: "always" do |ansible|
     ansible.playbook = "default_playbook.yml"
   end
+
+  # Enable provisioning with ansible.
+  config.vm.provision "ansible", type: "ansible", run: "once" do |ansible|
+    ansible.playbook = "#{PLAYBOOK}"
+  end
+  
+  # Enable provisioning with a shell script.
+  config.vm.provision "script", type: "shell", run: "once",
+    path: "#{SCRIPT}", args: "#{SCRIPT_ARGS}"
+
 
   config.vm.define "#{ENV['NAME']}", autostart: false do |node|
     # Every Vagrant development environment requires a box. You can search for

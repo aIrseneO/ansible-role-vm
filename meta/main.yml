@@ -1,6 +1,6 @@
 galaxy_info:
-  author: Arsene T.
-  description: Automate the creation of Virtual Machines using Vagrant and VirtualBox
+  author: arIseneO
+  description: Automate the creation of Virtual Machines using Vagrant and VirtualBox.
   # company: your company (optional)
 
   # If the issue tracker for your role is not on github, uncomment the
@@ -16,7 +16,7 @@ galaxy_info:
   # - CC-BY-4.0
   license: MIT
 
-  min_ansible_version: 2.1
+  min_ansible_version: 2.10
 
   # If this a Container Enabled role, provide the minimum Ansible Container version.
   # min_ansible_container_version:
@@ -27,7 +27,8 @@ galaxy_info:
   # To view available platforms and versions (or releases), visit:
   # https://galaxy.ansible.com/api/v1/platforms/
   #
-  # platforms:
+  platforms:
+  - name: Ubuntu
   # - name: Fedora
   #   versions:
   #   - all

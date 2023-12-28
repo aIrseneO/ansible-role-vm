@@ -1,9 +1,9 @@
 ---
 # defaults file for vm
 
-# Host  : machine hosting the VM(s)
-# Local : anisble machine where the playbook is run 
-# Host and Local can be the same machine. 
+## Host  : machine hosting the VM(s)
+## Local : anisble machine where the playbook is run 
+## Host and Local can be the same machine. 
 
 ## User of the host machine
 #
@@ -20,50 +20,60 @@ pub_key: "~/.ssh/id_rsa.pub"
 
 ## Vagrant available actions:
 #      up | resume | validate | status (default)
-#    halt | reload | suspend  | destroy 
+#    halt | reload | suspend  | destroy | provision
 #
 action: status
 
 ## Run command for a specific node only i.e. "VM42"
 #
-# node_select: "VM42"
+# node_selector: "VM42"
+
+## Playbook to run on the VM (on the local machine)
+#
+# playbook_path: "{{ playbook_dir }}/playbook.yml"
+
+## Script to run on the VM (on the local machine)
+#
+# script_path: "{{ playbook_dir }}/script.yml"
+# script_args: ""
+
 
 ## List of VM(s) to create
 # 
-nodes_vm:
-- NAME: VM42
-  HOSTNAME: VM42
+nodes_vm: []
+# - NAME: VM42
+#   HOSTNAME: VM42
 
-  ## VM resources
-  #
-  CPU: 1
-  MEMORY: 1024
+#   ## VM resources
+#   #
+#   CPU: 1
+#   MEMORY: 1024
 
-  ## Image:
-  #
-  IMAGE: generic/ubuntu2004
-  TAG: 4.3.6
+#   ## Image:
+#   #
+#   IMAGE: generic/ubuntu2004
+#   TAG: 4.3.6
 
-  ## Provider: tested with Virtualbox only
-  #
-  PROVIDER: virtualbox
+#   ## Provider: tested with Virtualbox only
+#   #
+#   PROVIDER: virtualbox
 
-  ## Networking
-  #   Network: public | private
-  #
-  NETWORK: public
-  IP: 192.168.1.42
-  MAC: 012345678912
-  BRIDGE: "{{ ansible_default_ipv4.interface }}"
+#   ## Networking
+#   #   Network: public | private
+#   #
+#   NETWORK: public
+#   IP: 192.168.1.42
+#   MAC: 012345678912
+#   BRIDGE: "{{ ansible_default_ipv4.interface }}"
 
-  ## SYNC: configure the sync betweem the host and the VM
-  #
-  DISABLE_SYNC: true
-  LOCAL_SYNC: "."
-  REMOTE_SYNC: "/vagrant"
+#   ## SYNC: configure the sync betweem the host and the VM
+#   #
+#   DISABLE_SYNC: true
+#   LOCAL_SYNC: "."
+#   REMOTE_SYNC: "/vagrant"
   
-  ## Task: To run on the VM during creation
-  #
-  # PLAYBOOK: "void"
-  # SCRIPT: "void"
-  # SCRIPT_ARGS: ""
+#   ## Task: To run on the VM during creation
+#   #
+#   PLAYBOOK: false
+#   SCRIPT: false
+#   SCRIPT_ARGS: ""

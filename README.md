@@ -28,7 +28,7 @@ Example Playbook
           action: up
           host_user: ansible
           pub_key: "~/.ssh/id_rsa.pub"
-          node_select: VM42
+          node_selector: VM42
           nodes_vm:
           - NAME: VM42
             HOSTNAME: VM42
