@@ -1,0 +1,71 @@
+---
+- name: "vagrant {{ clicmd }} {{ node_selector }}"
+  block:
+    - name: Get index of node
+      set_fact:
+        NAME:         "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='NAME')         | first | default('VM42') }}"
+        HOSTNAME:     "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='HOSTNAME')     | first | default('VM42') }}"
+        CPU:          "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='CPU')          | first | default(1) }}"
+        MEMORY:       "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='MEMORY')       | first | default(1024) }}"
+        IMAGE:        "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='IMAGE')        | first | default('generic/ubuntu2004') }}"
+        TAG:          "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='TAG')          | first | default('4.3.6') }}"
+        PROVIDER:     "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='PROVIDER')     | first | default('virtualbox') }}"
+        NETWORK:      "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='NETWORK')      | first | default('private') }}"
+        IP:           "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='IP')           | first | default('None') }}"
+        MAC:          "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='MAC')          | first | default('None') }}"
+        BRIDGE:       "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='BRIDGE')       | first | default('None') }}"
+        GUEST_PORT:   "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='GUEST_PORT')   | first | default(80) }}"
+        HOST_PORT:    "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='HOST_PORT')    | first | default(8080) }}"
+        HOST_IP:      "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='HOST_IP')      | first | default('None') }}"
+        DISABLE_SYNC: "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='DISABLE_SYNC') | first | default(true) }}"
+        LOCAL_SYNC:   "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='LOCAL_SYNC')   | first | default('.') }}"
+        REMOTE_SYNC:  "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='REMOTE_SYNC')  | first | default('/vagrant') }}"
+        RUN_PLAYBOOK: "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='RUN_PLAYBOOK') | first | default(false) }}"
+        RUN_SCRIPT:   "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='RUN_SCRIPT')   | first | default(false) }}"
+        SCRIPT_ARGS:  "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='SCRIPT_ARGS')  | first | default('') }}"
+    
+    - name: Apply command
+      shell: "{{ cmd }} {{ node_selector }}"
+      args:
+        chdir: "{{ working_dir }}"
+      environment:
+        NAME:         "{{ NAME }}"
+        HOSTNAME:     "{{ HOSTNAME }}"
+        CPU:          "{{ CPU }}"
+        MEMORY:       "{{ MEMORY }}"
+        IMAGE:        "{{ IMAGE }}"
+        TAG:          "{{ TAG }}"
+        PROVIDER:     "{{ PROVIDER }}"
+        NETWORK:      "{{ NETWORK }}"
+        IP:           "{{ IP }}"
+        MAC:          "{{ MAC }}"
+        BRIDGE:       "{{ BRIDGE }}"
+        GUEST_PORT:   "{{ GUEST_PORT }}"
+        HOST_PORT:    "{{ HOST_PORT }}"
+        HOST_IP:      "{{ HOST_IP }}"
+        DISABLE_SYNC: "{{ DISABLE_SYNC }}"
+        LOCAL_SYNC:   "{{ LOCAL_SYNC }}"
+        REMOTE_SYNC:  "{{ REMOTE_SYNC }}"
+        PLAYBOOK:     >-
+          {%- if RUN_PLAYBOOK is defined and RUN_PLAYBOOK == true -%}
+            {{ playbook_vm }}
+          {%- else -%}
+            void.yml
+          {%- endif -%}
+        SCRIPT:       >-
+          {%- if RUN_SCRIPT is defined and RUN_SCRIPT == true -%}
+            {{ script_vm }}
+          {%- else -%}
+            void.sh
+          {%- endif -%} 
+        SCRIPT_ARGS:  "{{ SCRIPT_ARGS }}"
+      register: response
+
+    - debug:
+        msg: 
+          - "{{ item.stdout_lines | default(item) }}"
+      with_items:
+      - "{{ response.results | default(response) }}"
+
+  when:
+    - vnodes | selectattr('NAME', 'eq', node_selector ) | list | first is defined

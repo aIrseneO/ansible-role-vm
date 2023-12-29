@@ -1,0 +1,12 @@
+---
+- hosts: all
+  become: true
+  tasks:
+  - name: Create a test file
+    ansible.builtin.file:
+      path: /home/vagrant/test
+      owner: vagrant
+      group: vagrant
+      mode: '0644'
+      state: touch
+ 

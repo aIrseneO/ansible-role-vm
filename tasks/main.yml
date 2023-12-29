@@ -1,107 +1,38 @@
 ---
 # tasks file for vm
-- name: Set available actions
+- name: Set available clicmd
   set_fact:
-    actions_start:
+    clicmd_start:
       - status
       - validate
       - up
       - resume
       - reload
       - provision
-    actions_stop:
+    clicmd_stop:
       - halt
       - suspend
       - destroy
+    playbook_vm:  void.yml
+    script_vm:    void.sh
 
 - name: Set command
   set_fact:
     cmd: >-
-      {%- if action == 'destroy' -%}
-        vagrant --no-tty {{ action }} --force
-      {%- elif action == 'provision' -%}
+      {%- if clicmd == 'destroy' -%}
+        vagrant --no-tty {{ clicmd }} --force
+      {%- elif clicmd == 'provision' -%}
         vagrant reload --provision-with default,ansible,script --force
-      {%- elif action in actions_start or action in actions_stop -%}
-        vagrant --no-tty {{ action }}
+      {%- elif clicmd in clicmd_start or clicmd in clicmd_stop -%}
+        vagrant --no-tty {{ clicmd }}
       {%- else -%}
         vagrant --no-tty status
       {%- endif -%}
 
-    playbook_vm:  void
-    script_vm:    void
-
-- name: Copy files to the host machine
-  block:
-  - name: Create working directory if not present
-    ansible.builtin.file:
-      path: "{{ working_dir }}"
-      state: directory
-
-  - name: Copy node files
-    copy:
-      src: "./"
-      dest: "{{ working_dir }}"
-      force: yes
-      mode: 0755
+- name: Copy files to host machine and update vars
+  include_tasks: copy_files_to_host.yml
   when:
-  - action in actions_start
-
-- name: Check if '{{ pub_key }}' exists
-  stat:
-    path: "{{ pub_key }}"
-  register: is_pub_key
-  when: action in actions_start and pub_key
-
-- name: Copy pub key to the host machine
-  copy:
-    src: "{{ pub_key }}"
-    dest: "{{ working_dir }}/id_rsa.pub"
-  when: 
-  - action in actions_start
-  - pub_key and is_pub_key.stat.exists
-
-
-- name: Move playbook and set playbook_vm variable
-  block:
-  - name: Check if playbook file exists
-    delegate_to: localhost
-    stat:
-      path: "{{ playbook_path }}"
-    register: isplaybook
-
-  - name: Copy playbook to the host machine
-    copy:
-      src: "{{ playbook_path }}"
-      dest: "{{ working_dir }}/playbook.yml"
-    when: isplaybook.stat.exists
-  
-  - name: Update playbook variable
-    set_fact:
-      playbook_vm: playbook.yml
-    when: isplaybook.stat.exists
-
-  when: playbook_path is defined and playbook_path
-
-- name: Move script and set script_vm variable
-  block:
-  - name: Check if script file exists
-    delegate_to: localhost
-    stat:
-      path: "{{ script_path }}"
-    register: isscript
-
-  - name: Copy script to the host machine
-    copy:
-      src: "{{ script_path }}"
-      dest: "{{ working_dir }}/script.yml"
-    when: isscript.stat.exists
-  
-  - name: Update script variable
-    set_fact:
-      script: script.yml
-    when: isscript.stat.exists
-
-  when: script_path is defined and script_path
+  - clicmd in clicmd_start
 
 - name: Install packages
   become: true
@@ -110,134 +41,30 @@
     state: present
   with_items:
   - ansible
-  when: action in actions_start
+  when: clicmd in clicmd_start
 
 - name: Check if Vagrantfile exists
   stat:
     path: "{{ working_dir }}/Vagrantfile"
   register: Vagrantfile
 
-- name: "vagrant {{ action }}"
-  block:
-  
-  - name: "{{ action }} node"
-    shell: "{{ cmd }} {{ item.NAME }}"
-    args:
-      chdir: "{{ working_dir }}"
-    environment:
-      NAME:         "{{ item.NAME         | default('VM42') }}"
-      HOSTNAME:     "{{ item.HOSTNAME     | default('VM42') }}"
-      CPU:          "{{ item.CPU          | default(1) }}"
-      MEMORY:       "{{ item.MEMORY       | default(1024) }}"
-      IMAGE:        "{{ item.IMAGE        | default('generic/ubuntu2004') }}"
-      TAG:          "{{ item.TAG          | default('4.3.6') }}"
-      PROVIDER:     "{{ item.PROVIDER     | default('virtualbox') }}"
-      NETWORK:      "{{ item.NETWORK      | default('public') }}"
-      IP:           "{{ item.IP           | default('192.168.1.42') }}"
-      MAC:          "{{ item.MAC          | default('012345678912') }}"
-      BRIDGE:       "{{ item.BRIDGE       | default(ansible_default_ipv4.interface) }}"
-      DISABLE_SYNC: "{{ item.DISABLE_SYNC | default(true) }}"
-      LOCAL_SYNC:   "{{ item.LOCAL_SYNC   | default('.') }}"
-      REMOTE_SYNC:  "{{ item.REMOTE_SYNC  | default('/vagrant') }}"
-      PLAYBOOK:     >-
-        {%- if item.PLAYBOOK is defined and item.PLAYBOOK == true -%}
-          {{ playbook_vm }}
-        {%- else -%}
-          void.yml
-        {%- endif -%}
-      SCRIPT:       >-
-        {%- if item.SCRIPT is defined and item.SCRIPT == true -%}
-          {{ script_vm }}
-        {%- else -%}
-          void.sh
-        {%- endif -%} 
-      SCRIPT_ARGS:  "{{ item.SCRIPT_ARGS  | default('') }}"
-    register: response
-    with_items: "{{ nodes_vm }}"
-
-  # - debug:
-  #     msg: 
-  #       - "{{ response }}"
-
-  - debug:
-      msg: 
-        - "{{ item.stdout_lines | default(item) }}"
-    with_items:
-    - "{{ response.results | default(response) }}"
-
+- name: Run {{ clicmd }} on all listed virtual nodes
+  include_tasks: run_cmd_on_all_nodes.yml
   when:
-  - Vagrantfile.stat.exists
-  - node_selector is undefined or not node_selector
+    - Vagrantfile.stat.exists
+    - nodes_selector is undefined or (nodes_selector | length == 0)
 
-- name: "vagrant {{ action }} {{ node_selector }}"
-  block:
-    - name: Get index of node
-      set_fact:
-        NAME:         "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='NAME')         | first | default('VM42') }}"
-        HOSTNAME:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='HOSTNAME')     | first | default('VM42') }}"
-        CPU:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='CPU')          | first | default(1) }}"
-        MEMORY:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='MEMORY')       | first | default(1024) }}"
-        IMAGE:        "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='IMAGE')        | first | default('generic/ubuntu2004') }}"
-        TAG:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='TAG')          | first | default('4.3.6') }}"
-        PROVIDER:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='PROVIDER')     | first | default('virtualbox') }}"
-        NETWORK:      "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='NETWORK')      | first | default('public') }}"
-        IP:           "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='IP')           | first | default('192.168.1.42') }}"
-        MAC:          "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='MAC')          | first | default('012345678912') }}"
-        BRIDGE:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='BRIDGE')       | first | default(ansible_default_ipv4.interface) }}"
-        DISABLE_SYNC: "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='DISABLE_SYNC') | first | default(true) }}"
-        LOCAL_SYNC:   "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='LOCAL_SYNC')   | first | default('.') }}"
-        REMOTE_SYNC:  "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='REMOTE_SYNC')  | first | default('/vagrant') }}"
-        PLAYBOOK:     "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='PLAYBOOK')     | first | default(false) }}"
-        SCRIPT:       "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='SCRIPT')       | first | default(false) }}"
-        SCRIPT_ARGS:  "{{ nodes_vm | selectattr('NAME', 'equalto', node_selector) | map(attribute='SCRIPT_ARGS')  | first | default('') }}"
-    
-    - name: Apply command
-      shell: "{{ cmd }} {{ node_selector }}"
-      args:
-        chdir: "{{ working_dir }}"
-      environment:
-        NAME:         "{{ NAME }}"
-        HOSTNAME:     "{{ HOSTNAME }}"
-        CPU:          "{{ CPU }}"
-        MEMORY:       "{{ MEMORY }}"
-        IMAGE:        "{{ IMAGE }}"
-        TAG:          "{{ TAG }}"
-        PROVIDER:     "{{ PROVIDER }}"
-        NETWORK:      "{{ NETWORK }}"
-        IP:           "{{ IP }}"
-        MAC:          "{{ MAC }}"
-        BRIDGE:       "{{ BRIDGE }}"
-        DISABLE_SYNC: "{{ DISABLE_SYNC }}"
-        LOCAL_SYNC:   "{{ LOCAL_SYNC }}"
-        REMOTE_SYNC:  "{{ REMOTE_SYNC }}"
-        PLAYBOOK:     >-
-          {%- if PLAYBOOK is defined and PLAYBOOK == true -%}
-            {{ playbook_vm }}
-          {%- else -%}
-            void.yml
-          {%- endif -%}
-        SCRIPT:       >-
-          {%- if SCRIPT is defined and SCRIPT == true -%}
-            {{ script_vm }}
-          {%- else -%}
-            void.sh
-          {%- endif -%} 
-        SCRIPT_ARGS:  "{{ SCRIPT_ARGS }}"
-      register: response
-
-    - debug:
-        msg: 
-          - "{{ item.stdout_lines | default(item) }}"
-      with_items:
-      - "{{ response.results | default(response) }}"
-
+- name: Run {{ clicmd }} on selected virtual node(s)
+  include_tasks: run_cmd_on_selected_nodes.yml
+  with_items: "{{ nodes_selector }}"
+  loop_control:
+    loop_var: node_selector
   when:
-  - Vagrantfile.stat.exists
-  - node_selector is defined and node_selector
-  - nodes_vm | selectattr('NAME', 'eq', node_selector ) | list | first is defined
+    - Vagrantfile.stat.exists
+    - node_selector is defined and (nodes_selector | length > 0)
 
 - name: Recursively remove directory
   file:
     path: "{{ working_dir }}"
     state: absent
-  when: action == "destroy"
+  when: clicmd == "destroy"

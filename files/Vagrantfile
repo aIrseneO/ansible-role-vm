@@ -25,11 +25,15 @@ TAG           = ENV["TAG"]          || "4.3.6"
 PROVIDER      = ENV["PROVIDER"]     || "virtualbox"
 
 NETWORK       = ENV["NETWORK"]      || "private"
-IP            = ENV["IP"]           || "192.168.1.42"
-MAC           = ENV["MAC"]          || "012345678912"
-BRIDGE        = ENV["BRIDGE"]       || "wlan"
+IP            = ENV["IP"]           || "None"
+MAC           = ENV["MAC"]          || "None"
+BRIDGE        = ENV["BRIDGE"]       || "None"
+GUEST_PORT    = ENV["GUEST_PORT"]   || "80"
+HOST_PORT     = ENV["HOST_PORT"]    || "8080"
+HOST_IP       = ENV["HOST_IP"]      || "None"
 
-DISABLE_SYNC  = ENV["SYNC"]         || true
+
+DISABLE_SYNC  = ENV["DISABLE_SYNC"] || true
 LOCAL_SYNC    = ENV['LOCAL_SYNC']   || "."
 REMOTE_SYNC   = ENV['REMOTE_SYNC']  || "/vagrant"
 
@@ -43,7 +47,7 @@ Vagrant.configure("2") do |config|
 
   # Synced folders
   config.vm.synced_folder "#{LOCAL_SYNC}", "#{REMOTE_SYNC}",
-    disabled: ENV['SYNC'], type: "rsync"
+    disabled: "#{DISABLE_SYNC}", type: "rsync"
   
   # Default provisioning with ansible.
   config.vm.provision "default", type: "ansible", run: "always" do |ansible|
@@ -60,44 +64,79 @@ Vagrant.configure("2") do |config|
     path: "#{SCRIPT}", args: "#{SCRIPT_ARGS}"
 
 
-  config.vm.define "#{ENV['NAME']}", autostart: false do |node|
+  config.vm.define "#{NAME}", autostart: false do |node|
     # Every Vagrant development environment requires a box. You can search for
     # boxes at https://vagrantcloud.com/search.
-    node.vm.box = "#{ENV['IMAGE']}"
-    node.vm.box_version = "#{ENV['TAG']}"
+    node.vm.box = "#{IMAGE}"
+    node.vm.box_version = "#{TAG}"
 
     # Disable automatic box update checking. If you disable this, then
     # boxes will only be checked for updates when the user runs
     # `vagrant box outdated`. This is not recommended.
     node.vm.box_check_update = false
 
-    # Create a public network, which generally matched to bridged network.
-    # Bridged networks make the machine appear as another physical device on
-    # your network.
-    if ENV['NETWORK'] == 'public'
-      node.vm.network "public_network", ip: "#{ENV['IP']}",
-        bridge: "#{ENV['BRIDGE']}", mac: "#{ENV['MAC']}"
+    # Create a forwarded port mapping which allows access to a specific port
+    # within the machine from a port on the host machine and only allow access
+    # via a spacific ip to disable public access
+    if ENV['NETWORK'] == 'forwarded_port'
+      if ENV['HOST_IP'] == 'None'
+        node.vm.network "forwarded_port", guest: "#{GUEST_PORT}",
+          host: "#{HOST_PORT}"
+      else
+        node.vm.network "forwarded_port", guest: "#{GUEST_PORT}",
+          host: "#{HOST_PORT}", host_ip: "#{HOST_IP}"
+      end
     end
 
     # Create a private network, which allows host-only access to the machine
     # using a specific IP.
     if ENV['NETWORK'] == 'private'
-      node.vm.network "private_network", ip: "#{ENV['IP']}"
+      node.vm.network "private_network", ip: "#{IP}"
+    end
+
+    # Create a public network, which generally matched to bridged network.
+    # Bridged networks make the machine appear as another physical device on
+    # your network.
+    if ENV['NETWORK'] == 'public'
+      if ENV['IP'] == 'None'
+        if ENV['MAC'] == 'None'
+          if ENV['BRIDGE'] == 'None'
+            node.vm.network "public_network"
+          else
+            node.vm.network "public_network", bridge: "#{BRIDGE}"
+          end
+        else
+          node.vm.network "public_network", bridge: "#{BRIDGE}",
+            mac: "#{MAC}"
+        end
+      else
+        if ENV['BRIDGE'] == 'None'
+          node.vm.network "public_network", ip: "#{IP}"
+        else
+          if ENV['MAC'] == 'None'
+            node.vm.network "public_network", ip: "#{IP}",
+              bridge: "#{BRIDGE}"
+          else
+            node.vm.network "public_network", ip: "#{IP}",
+              bridge: "#{BRIDGE}", mac: "#{MAC}"
+          end
+        end
+      end
     end
 
     # Set the hostname.
-    node.vm.hostname = "#{ENV['HOSTNAME']}"
+    node.vm.hostname = "#{HOSTNAME}"
 
     # Provider-specific configuration so you can fine-tune various
     # backing providers for Vagrant. These expose provider-specific options.
     #
     # For VirtualBox:
     if ENV['PROVIDER'] == 'virtualbox'
-      node.vm.provider "#{ENV['PROVIDER']}" do |vb|
+      node.vm.provider "#{PROVIDER}" do |vb|
         vb.gui = false
-        vb.cpus = "#{ENV['CPU']}"
-        vb.memory = "#{ENV['MEMORY']}"
-        vb.name = "#{ENV['NAME']}"
+        vb.cpus = "#{CPU}"
+        vb.memory = "#{MEMORY}"
+        vb.name = "#{NAME}"
       end
     end
   end

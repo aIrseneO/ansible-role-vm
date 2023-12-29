@@ -1,6 +1,6 @@
 galaxy_info:
   author: arIseneO
-  description: Automate the creation of Virtual Machines using Vagrant and VirtualBox.
+  description: Automate the creation of Virtual Machines using preinstalled Vagrant and VirtualBox softwares.
   # company: your company (optional)
 
   # If the issue tracker for your role is not on github, uncomment the

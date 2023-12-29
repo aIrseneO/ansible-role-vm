@@ -23,27 +23,75 @@ Example Playbook
 ----------------
     - hosts: servers
       roles:
-         - aIrseneO.vm
+        - aIrseneO.vm
       vars:
-          action: up
-          host_user: ansible
-          pub_key: "~/.ssh/id_rsa.pub"
-          node_selector: VM42
-          nodes_vm:
-          - NAME: VM42
-            HOSTNAME: VM42
-            CPU: 1
-            MEMORY: 1024
-            IMAGE: generic/ubuntu2004
-            TAG: 4.3.6
-            PROVIDER: virtualbox
-            NETWORK: public
-            IP: 192.168.1.42
-            MAC: "080027d590d9"
-            BRIDGE: "{{ ansible_default_ipv4.interface }}"
-            DISABLE_SYNC: true
-            LOCAL_SYNC: "."
-            REMOTE_SYNC: "/vagrant"
+        ## User of the host machine
+        #
+        host_user: ansible
+
+        ## Working directory on the host machine
+        #
+        working_dir: "/home/{{ host_user }}/vagrant"
+
+        ## Public key to allow ssh client to access VM(s)
+        #   Local ssh public key can be used "~/.ssh/id_rsa.pub"
+        #
+        # pub_key: "~/.ssh/id_rsa.pub"
+
+        ## Vagrant available clicmd:
+        #      up | resume | validate | status (default)
+        #    halt | reload | suspend  | destroy | provision
+        #
+        clicmd: status
+
+        ## Run command for a specific node only i.e. "VM42"
+        #
+        # nodes_selector: []
+
+        ## Playbook to run on the VM (on the local machine)
+        #
+        # playbook_path: "{{ playbook_dir }}/playbook.yml"
+
+        ## Script to run on the VM (on the local machine)
+        #
+        # script_path: "{{ playbook_dir }}/script.yml"
+
+        ## List of VM(s) to create
+        # 
+        vnodes:
+        - NAME: VM42
+          HOSTNAME: VM42
+
+          ## VM resources
+          #
+          CPU: 1
+          MEMORY: 1024
+
+          ## Image:
+          #
+          IMAGE: generic/ubuntu2004
+          TAG: 4.3.6
+
+          ## Provider: tested with Virtualbox only
+          #
+          PROVIDER: virtualbox
+
+          ## Networking
+          #   Network: public | private | forwarded_port
+          NETWORK: private
+          IP: 192.168.21.42
+
+          ## SYNC: configure the sync betweem the host and the VM
+          #
+          DISABLE_SYNC: true
+          LOCAL_SYNC: "."
+          REMOTE_SYNC: "/vagrant"
+          
+          ## Task: To run on the VM during creation
+          #
+          RUN_PLAYBOOK: false
+          RUN_SCRIPT: false
+          SCRIPT_ARGS: ""
 
 License
 -------

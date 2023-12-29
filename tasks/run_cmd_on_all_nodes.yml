@@ -1,0 +1,50 @@
+---
+- name: "vagrant {{ clicmd }}"
+  block:
+  - name: "{{ clicmd }} node"
+    shell: "{{ cmd }} {{ item.NAME }}"
+    args:
+      chdir: "{{ working_dir }}"
+    environment:
+      NAME:         "{{ item.NAME         | default('VM42') }}"
+      HOSTNAME:     "{{ item.HOSTNAME     | default('VM42') }}"
+      CPU:          "{{ item.CPU          | default(1) }}"
+      MEMORY:       "{{ item.MEMORY       | default(1024) }}"
+      IMAGE:        "{{ item.IMAGE        | default('generic/ubuntu2004') }}"
+      TAG:          "{{ item.TAG          | default('4.3.6') }}"
+      PROVIDER:     "{{ item.PROVIDER     | default('virtualbox') }}"
+      NETWORK:      "{{ item.NETWORK      | default('private') }}"
+      IP:           "{{ item.IP           | default('None') }}"
+      MAC:          "{{ item.MAC          | default('None') }}"
+      BRIDGE:       "{{ item.BRIDGE       | default('None') }}"
+      GUEST_PORT:   "{{ item.GUEST_PORT   | default(80) }}"
+      HOST_PORT:    "{{ item.HOST_PORT    | default(8080) }}"
+      HOST_IP:      "{{ item.HOST_IP      | default('None') }}"
+      DISABLE_SYNC: "{{ item.DISABLE_SYNC | default(true) }}"
+      LOCAL_SYNC:   "{{ item.LOCAL_SYNC   | default('.') }}"
+      REMOTE_SYNC:  "{{ item.REMOTE_SYNC  | default('/vagrant') }}"
+      PLAYBOOK:     >-
+        {%- if item.RUN_PLAYBOOK is defined and item.RUN_PLAYBOOK == true -%}
+          {{ playbook_vm }}
+        {%- else -%}
+          void.yml
+        {%- endif -%}
+      SCRIPT:       >-
+        {%- if item.RUN_SCRIPT is defined and item.RUN_SCRIPT == true -%}
+          {{ script_vm }}
+        {%- else -%}
+          void.sh
+        {%- endif -%} 
+      SCRIPT_ARGS:  "{{ item.SCRIPT_ARGS  | default('') }}"
+    register: response
+    with_items: "{{ vnodes }}"
+
+  # - debug:
+  #     msg: 
+  #       - "{{ response }}"
+
+  - debug:
+      msg: 
+        - "{{ item.stdout_lines | default(item) }}"
+    with_items:
+    - "{{ response.results | default(response) }}"

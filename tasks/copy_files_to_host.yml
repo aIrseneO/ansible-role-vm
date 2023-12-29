@@ -1,0 +1,75 @@
+---
+- name: Copy files to the host machine
+  block:
+  - name: Create working directory if not present
+    ansible.builtin.file:
+      path: "{{ working_dir }}"
+      state: directory
+
+  - name: Copy node files
+    copy:
+      src: "./"
+      dest: "{{ working_dir }}"
+      force: yes
+      mode: 0755
+
+- name: Copy pub key to the host machine if key exists
+  block:
+  - name: Check if '{{ pub_key }}' exists
+    stat:
+      path: "{{ pub_key }}"
+    register: is_pub_key
+
+  - name: Copy pub key to the host machine
+    copy:
+      src: "{{ pub_key }}"
+      dest: "{{ working_dir }}/id_rsa.pub"
+    when: 
+      - is_pub_key.stat.exists
+
+  when: 
+  - pub_key is defined and pub_key
+
+- name: Copy playbook if it exists and set playbook_vm variable
+  block:
+  - name: Check if playbook file exists
+    delegate_to: localhost
+    stat:
+      path: "{{ playbook_path }}"
+    register: isplaybook
+
+  - name: Copy playbook to the host machine
+    copy:
+      src: "{{ playbook_path }}"
+      dest: "{{ working_dir }}/playbook.yml"
+    when: isplaybook.stat.exists
+  
+  - name: Update playbook variable
+    set_fact:
+      playbook_vm: playbook.yml
+    when: isplaybook.stat.exists
+
+  when:
+    - playbook_path is defined and playbook_path
+
+- name: Copy script if it exists and set script_vm variable
+  block:
+  - name: Check if script file exists
+    delegate_to: localhost
+    stat:
+      path: "{{ script_path }}"
+    register: isscript
+
+  - name: Copy script to the host machine
+    copy:
+      src: "{{ script_path }}"
+      dest: "{{ working_dir }}/script.yml"
+    when: isscript.stat.exists
+  
+  - name: Update script variable
+    set_fact:
+      script: script.yml
+    when: isscript.stat.exists
+
+  when:
+    - script_path is defined and script_path
