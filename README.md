@@ -45,9 +45,15 @@ Example Playbook
         #
         clicmd: status
 
-        ## Run command for a specific node only i.e. "VM42"
+        ## Node selector (selected by NAME):
+        #   Run command for a specific node(s) only i.e. "VM42"
         #
         # nodes_selector: []
+        #
+        ## To select all node with a string include in their name use:
+        #
+        # nodes_selector:
+        #   include: k3s1
 
         ## Playbook to run on the VM (on the local machine)
         #

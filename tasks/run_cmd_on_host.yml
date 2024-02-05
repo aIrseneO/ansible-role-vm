@@ -1,7 +1,7 @@
 ---
-- name: "vagrant {{ clicmd }}"
+- name: "Run vagrant command '{{ clicmd }}' on host and display output"
   block:
-  - name: "{{ clicmd }} node"
+  - name: "Run '{{ cmd }}' on host"
     shell: "{{ cmd }} {{ item.NAME }}"
     args:
       chdir: "{{ working_dir }}"
@@ -37,14 +37,17 @@
         {%- endif -%} 
       SCRIPT_ARGS:  "{{ item.SCRIPT_ARGS  | default('') }}"
     register: response
+    when: 
+    - nodes_selector is undefined or (nodes_selector | length == 0) or
+      nodes_selector.include is defined and nodes_selector.include in item.NAME
     with_items: "{{ vnodes }}"
 
-  # - debug:
-  #     msg: 
-  #       - "{{ response }}"
-
-  - debug:
+  - name: Display run output
+    debug:
       msg: 
         - "{{ item.stdout_lines | default(item) }}"
     with_items:
     - "{{ response.results | default(response) }}"
+    when:
+    - item.changed is defined
+    - item.changed == true

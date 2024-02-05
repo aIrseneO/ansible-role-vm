@@ -48,18 +48,17 @@
     path: "{{ working_dir }}/Vagrantfile"
   register: Vagrantfile
 
-# - debug:
-#     msg: "{{ clicmd }}"
-
-- name: Run {{ clicmd }} on all listed virtual nodes
-  include_tasks: run_cmd_on_all_nodes.yml
+- name: Run vagrant command '{{ clicmd }}' on host and display output
+  include_tasks: run_cmd_on_host.yml
   when:
     - cmd != "None"
     - Vagrantfile.stat.exists
-    - nodes_selector is undefined or (nodes_selector | length == 0)
+    - nodes_selector is undefined or 
+      (nodes_selector | length == 0) or
+      nodes_selector.include is defined
 
-- name: Run {{ clicmd }} on selected virtual node(s)
-  include_tasks: run_cmd_on_selected_nodes.yml
+- name: Run vagrant command '{{ clicmd }}' on host and display output
+  include_tasks: run_cmd_on_host_for_selected_nodes.yml
   with_items: "{{ nodes_selector }}"
   loop_control:
     loop_var: node_selector

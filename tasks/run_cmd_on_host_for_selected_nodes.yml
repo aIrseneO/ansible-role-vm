@@ -24,7 +24,7 @@
         RUN_SCRIPT:   "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='RUN_SCRIPT')   | first | default(false) }}"
         SCRIPT_ARGS:  "{{ vnodes | selectattr('NAME', 'equalto', node_selector) | map(attribute='SCRIPT_ARGS')  | first | default('') }}"
     
-    - name: Apply command
+    - name: "Run '{{ cmd }}' on host"
       shell: "{{ cmd }} {{ node_selector }}"
       args:
         chdir: "{{ working_dir }}"
@@ -61,11 +61,15 @@
         SCRIPT_ARGS:  "{{ SCRIPT_ARGS }}"
       register: response
 
-    - debug:
+    - name: Display run output
+      debug:
         msg: 
           - "{{ item.stdout_lines | default(item) }}"
       with_items:
       - "{{ response.results | default(response) }}"
+      when:
+      - item.changed is defined
+      - item.changed == true
 
   when:
     - vnodes | selectattr('NAME', 'eq', node_selector ) | list | first is defined
