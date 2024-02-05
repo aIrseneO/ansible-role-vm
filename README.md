@@ -40,7 +40,8 @@ Example Playbook
 
         ## Vagrant available clicmd:
         #      up | resume | validate | status (default)
-        #    halt | reload | suspend  | destroy | provision
+        #    halt | reload | suspend  | destroy
+        #   clean | provision
         #
         clicmd: status
 
